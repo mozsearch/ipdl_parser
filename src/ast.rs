@@ -346,6 +346,7 @@ pub struct Protocol {
     pub managers: Vec<Identifier>,
     pub manages: Vec<Identifier>,
     pub messages: Vec<MessageDecl>,
+    pub annotations: Vec<(Identifier, Option<Identifier>)>,
 }
 
 impl Protocol {
@@ -355,6 +356,7 @@ impl Protocol {
         managers: Vec<Identifier>,
         manages: Vec<Identifier>,
         decls: Vec<MessageDecl>,
+        annotations: Vec<(Identifier, Option<Identifier>)>,
     ) -> Protocol {
         Protocol {
             send_semantics: send_semantics,
@@ -362,6 +364,7 @@ impl Protocol {
             managers: managers,
             manages: manages,
             messages: decls,
+            annotations,
         }
     }
 }

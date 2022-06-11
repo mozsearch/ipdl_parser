@@ -1,0 +1,5 @@
+[ManualDealloc, ChildImpl=virtual, ParentImpl=Virtual]
+sync protocol Pmanualvirtual {
+child:
+    async __delete__();
+};

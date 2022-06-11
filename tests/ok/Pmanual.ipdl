@@ -1,0 +1,5 @@
+[ManualDealloc]
+sync protocol Pmanual {
+child:
+    async __delete__();
+};
