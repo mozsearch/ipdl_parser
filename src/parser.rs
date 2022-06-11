@@ -255,6 +255,10 @@ fn parse_internal(
             Ok(fc) => fc,
             Err(_) => {
                 if ignore_errors {
+                    println!(
+                        "error: can't locate file specified on the command line `{}'",
+                        f.display()
+                    );
                     continue;
                 } else {
                     return Err(format!(
@@ -281,6 +285,9 @@ fn parse_internal(
                 Ok(tu) => tu,
                 Err(message) => {
                     if ignore_errors {
+                        let mut new_message = include_context_to_string(&include_context);
+                        new_message.push_str(&format!("{} {}", curr_file.display(), message));
+                        println!("  {}", new_message);
                         continue;
                     } else {
                         let mut new_message = include_context_to_string(&include_context);
