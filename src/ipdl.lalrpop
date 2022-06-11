@@ -11,6 +11,18 @@ use parser::{TopLevelDecl, ParserState, PreambleStmt};
 
 grammar<'a>(parser_state: &ParserState<'a>);
 
+// This is from the calculator example
+// https://github.com/lalrpop/lalrpop/blob/master/doc/calculator/src/calculator5.lalrpop
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None=> v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
+
 //-----------------------------------------------------------------------------
 
 STRING: String = <s:r#""[^"\n]*""#> => String::from(s);
@@ -189,7 +201,18 @@ UnionDecl: (Namespace, Vec<TypeSpec>) = {
     }
 };
 
+AnnotationPair: (Identifier, Option<Identifier>) = {
+    <key:Identifier> <value:("=" <Identifier>)?> => (key, value)
+}
+
+AnnotationList = Comma<AnnotationPair>;
+
+ProtocolAnnotations: Vec<(Identifier, Option<Identifier>)> = {
+    "[" <annos:AnnotationList> "]" => annos
+};
+
 ProtocolDefn: (Namespace, Protocol) = {
+    <a:ProtocolAnnotations?>
     <q:ProtocolSendSemanticsQual?> "protocol" <name:Identifier> "{"
         <managers:ManagersStmtOpt> <manages:ManagesStmt*> <decls:MessageDeclThing*> "}" ";" =>
     {
@@ -200,7 +223,8 @@ ProtocolDefn: (Namespace, Protocol) = {
         }
 
         let (nested, send_semantics) = q.unwrap_or((Nesting::None, SendSemantics::Async));
-        (Namespace::new(name), Protocol::new(send_semantics, nested, managers, manages, decls))
+        let annos = a.unwrap_or_else(|| vec![]);
+        (Namespace::new(name), Protocol::new(send_semantics, nested, managers, manages, decls, annos))
     },
 };
 
