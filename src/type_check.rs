@@ -408,6 +408,25 @@ fn get_nested(attributes: &Attributes, key: &str) -> Nesting {
     .unwrap_or(Nesting::None)
 }
 
+struct HostProcesses {
+    parent: Option<String>,
+    child: Option<String>,
+}
+fn get_processes(attributes: &Attributes) -> HostProcesses {
+    fn get<'a>(attributes: &'a Attributes, key: &str) -> Option<String> {
+        match &attributes.get(key)?.1 {
+            AttributeValue::Identifier(s) => Some(s.id.to_string()),
+            // TODO: either emit an error here, or make this irrepresentable
+            _ => None,
+        }
+    }
+
+    HostProcesses {
+        parent: get(attributes, "ParentProc"),
+        child: get(attributes, "ChildProc"),
+    }
+}
+
 fn get_prio_impl(attributes: &Attributes, key: &str) -> Option<Priority> {
     get_attribute_value(
         attributes,
@@ -505,6 +524,8 @@ struct ProtocolTypeDef {
     manages: Vec<TUId>,
     messages: Vec<MessageTypeDef>,
     has_delete: bool,
+    proc_parent: Option<String>,
+    proc_child: Option<String>,
     #[allow(dead_code)]
     lifetime: Lifetime,
     needs_other_pid: bool,
@@ -512,6 +533,7 @@ struct ProtocolTypeDef {
 
 impl ProtocolTypeDef {
     fn new(&(ref ns, ref p): &(Namespace, Protocol)) -> ProtocolTypeDef {
+        let processes = get_processes(&p.attributes);
         ProtocolTypeDef {
             qname: ns.qname(),
             send_semantics: p.send_semantics,
@@ -519,6 +541,8 @@ impl ProtocolTypeDef {
             managers: Vec::new(),
             manages: Vec::new(),
             messages: Vec::new(),
+            proc_parent: processes.parent,
+            proc_child: processes.child,
             has_delete: false,
             lifetime: if p.attributes.contains_key("ManualDealloc") {
                 Lifetime::RefCounted
@@ -544,6 +568,16 @@ impl ProtocolTypeDef {
     fn converts_to(&self, other: &ProtocolTypeDef) -> bool {
         self.message_strength()
             .converts_to(&other.message_strength())
+    }
+
+    #[allow(dead_code)]
+    fn process_for(&self, side: ProtocolSide) -> Option<&str> {
+        match side {
+            ProtocolSide::Parent => &self.proc_parent,
+            ProtocolSide::Child => &self.proc_child,
+        }
+        .as_ref()
+        .map(|u| u.as_str())
     }
 }
 
@@ -768,32 +802,60 @@ fn declare_protocol(
 ) -> Errors {
     let mut errors = Errors::none();
 
-    let protocol_attributes: AttributeSpec = HashMap::from([
-        ("ManualDealloc", Vec::new()),
-        (
-            "NestedUpTo",
-            Vec::from([
-                AttributeSpecValue::Keyword("not"),
-                AttributeSpecValue::Keyword("inside_sync"),
-                AttributeSpecValue::Keyword("inside_cpow"),
-            ]),
-        ),
-        ("NeedsOtherPid", Vec::new()),
-        (
-            "ChildImpl",
-            Vec::from([
-                AttributeSpecValue::Keyword("virtual"),
-                AttributeSpecValue::StringLiteral,
-            ]),
-        ),
-        (
-            "ParentImpl",
-            Vec::from([
-                AttributeSpecValue::Keyword("virtual"),
-                AttributeSpecValue::StringLiteral,
-            ]),
-        ),
-    ]);
+    let protocol_attributes: AttributeSpec = {
+        let process_keywords = || {
+            [
+                "Parent",
+                "Content",
+                "IPDLUnitTest",
+                "GMPlugin",
+                "GPU",
+                "VR",
+                "RDD",
+                "Socket",
+                "RemoteSandboxBroker",
+                "ForkServer",
+                "Utility",
+                // ---
+                "any",
+                "anychild",
+                "compositor",
+                "anydom",
+            ]
+            .iter()
+            .map(|k| AttributeSpecValue::Keyword(k))
+            .collect::<Vec<_>>()
+        };
+
+        HashMap::from([
+            ("ManualDealloc", Vec::new()),
+            (
+                "NestedUpTo",
+                Vec::from([
+                    AttributeSpecValue::Keyword("not"),
+                    AttributeSpecValue::Keyword("inside_sync"),
+                    AttributeSpecValue::Keyword("inside_cpow"),
+                ]),
+            ),
+            ("NeedsOtherPid", Vec::new()),
+            (
+                "ChildImpl",
+                Vec::from([
+                    AttributeSpecValue::Keyword("virtual"),
+                    AttributeSpecValue::StringLiteral,
+                ]),
+            ),
+            (
+                "ParentImpl",
+                Vec::from([
+                    AttributeSpecValue::Keyword("virtual"),
+                    AttributeSpecValue::StringLiteral,
+                ]),
+            ),
+            ("ChildProc", process_keywords()),
+            ("ParentProc", process_keywords()),
+        ])
+    };
     errors.append(check_attributes(&p.attributes, &protocol_attributes));
 
     let p_type = IPDLType::ProtocolType(tuid.clone());
