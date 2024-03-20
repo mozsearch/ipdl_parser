@@ -1203,7 +1203,7 @@ fn gather_decls_protocol(
         ));
     }
 
-    if p.1.managers.len() == 0 && p.1.messages.len() == 0 {
+    if p.1.managers.len() == 0 && p.1.manages.len() == 0 && p.1.messages.len() == 0 {
         errors.append_one(
             &p.0.name.loc,
             &format!(
