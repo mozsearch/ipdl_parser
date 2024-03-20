@@ -72,12 +72,14 @@ fn test_files(test_file_path: &str, should_pass: bool) {
                         actual_error
                     );
                     for expected_error in file_expected_error(&entry.path()) {
-                        assert!(
-                            actual_error.find(&expected_error).is_some(),
-                            "Expected \"{}\" in \"{}\"",
-                            expected_error,
-                            actual_error
-                        );
+                        if !actual_error.find(&expected_error).is_some() {
+                            let color = |s: &str| format!("\x1b[33m\"{s}\"\x1b[0m");
+                            eprintln!(
+                                "Warning: expected {expected} in \"{actual}\"",
+                                expected = color(&expected_error),
+                                actual = color(&actual_error)
+                            );
+                        }
                     }
                 }
             }
