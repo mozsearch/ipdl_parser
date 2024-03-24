@@ -1,3 +1,4 @@
+[ChildProc=any]
 async protocol Prio
 {
 child:
@@ -6,4 +7,6 @@ child:
   [Priority=input] async InputPrio();
   [Priority=mediumhigh] async MediumHighPrio();
   [Priority=control] async ControlPrio();
+  [ReplyPriority=control] async ControlPrioReturns() returns (bool aValue);
+  [Priority=normal, ReplyPriority=control] async NormalControlPrioReturns() returns (bool aValue);
 };
