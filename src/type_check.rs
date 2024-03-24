@@ -86,6 +86,7 @@ enum Lifetime {
 // don't know how useful it is to split them. Plus my notion of type
 // may be different.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum IPDLType {
     BuiltinCType(&'static str),
     ImportedCxxType(
@@ -295,6 +296,7 @@ impl UnionTypeDef {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum MessageType {
     Ctor(TUId),
     Dtor(TUId),
