@@ -15,7 +15,11 @@ const ERROR_PATH: &'static str = "error";
 // Tests in error/ are disabled because the given checking is not
 // enabled yet.
 
-const DISABLED_TESTS: &'static [&'static str] = &[];
+const DISABLED_TESTS: &'static [&'static str] = &[
+    // Sync message checking hasn't been implemented.
+    "PasyncMessageListed.ipdl",
+    "unknownSyncMessage.ipdl",
+];
 
 fn file_expected_error(file_name: &PathBuf) -> Vec<String> {
     let mut errors = Vec::new();
