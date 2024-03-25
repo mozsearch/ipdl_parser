@@ -388,7 +388,7 @@ struct MessageTypeDef {
     lazy_send: bool,
     virtual_send: bool,
 }
-// XXX Need to add LegacyIntr, Tainted.
+// XXX Need to add Tainted.
 
 fn has_attribute(attributes: &Attributes, key: &str) -> bool {
     attributes.contains_key(key)
@@ -1187,7 +1187,7 @@ fn gather_decls_message(
                     AttributeSpecValue::Keyword("inside_cpow"),
                 ]),
             ),
-            ("LegacyIntr", Vec::new()),
+            ("LegacyIntr", Vec::new()), // XXX LegacyIntr has been removed.
             ("LazySend", Vec::new()),
             ("VirtualSendImpl", Vec::new()),
         ])
