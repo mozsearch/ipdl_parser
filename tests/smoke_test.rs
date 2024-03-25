@@ -12,10 +12,9 @@ const BASE_PATH: [&'static str; 2] = [".", "tests"];
 const OK_PATH: &'static str = "ok";
 const ERROR_PATH: &'static str = "error";
 
-// Tests in error/ are disabled because the given checking is not
-// enabled yet.
-
-const DISABLED_TESTS: &'static [&'static str] = &[
+// These tests are in error/ but will pass because the required checking
+// has not yet been implemented.
+const ERROR_PASS_TESTS: &'static [&'static str] = &[
     // Sync message checking hasn't been implemented.
     "PasyncMessageListed.ipdl",
     "unknownSyncMessage.ipdl",
@@ -55,9 +54,9 @@ fn test_files(test_file_path: &str, should_pass: bool) {
         include_dirs.push(extra_path);
     }
 
-    let mut disabled_tests = HashSet::new();
-    for f in DISABLED_TESTS {
-        disabled_tests.insert(OsStr::new(f));
+    let mut error_pass_tests = HashSet::new();
+    for f in ERROR_PASS_TESTS {
+        error_pass_tests.insert(OsStr::new(f));
     }
 
     let entries = fs::read_dir(&path).expect("Should have the test file directory");
@@ -69,7 +68,7 @@ fn test_files(test_file_path: &str, should_pass: bool) {
             }
 
             let mut expected_result = should_pass;
-            if !should_pass && disabled_tests.contains(entry.path().file_name().unwrap()) {
+            if !should_pass && error_pass_tests.contains(entry.path().file_name().unwrap()) {
                 println!(
                     "Expecting test to pass when it should fail {:?}",
                     entry.file_name()
