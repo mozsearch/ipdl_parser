@@ -1216,7 +1216,7 @@ fn gather_decls_message(
         );
     }
 
-    if md.out_params.len() > 0 && has_attribute(&md.attributes, "ReplyPriority") {
+    if md.out_params.len() == 0 && has_attribute(&md.attributes, "ReplyPriority") {
         errors.append_one(
             &md.name.loc,
             &format!(
