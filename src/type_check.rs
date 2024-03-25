@@ -1384,6 +1384,13 @@ fn gather_decls_protocol(
         }
     }
 
+    if p_type.manages.len() > 0 && p_type.lifetime == Lifetime::ManualDealloc {
+        errors.append_one(
+            &p.0.name.loc,
+            &format!("[ManualDealloc] protocols cannot be managers"),
+        );
+    }
+
     // FIXME/cjones Declare all the little C++ thingies that will
     // be generated. They're not relevant to IPDL itself, but
     // those ("invisible") symbols can clash with others in the
