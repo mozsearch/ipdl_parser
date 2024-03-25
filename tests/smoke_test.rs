@@ -41,7 +41,15 @@ fn test_files(test_file_path: &str, should_pass: bool) {
     let mut path: PathBuf = BASE_PATH.iter().collect();
     path.push(test_file_path);
 
-    let include_dirs = vec![path.clone()];
+    let mut include_dirs = vec![path.clone()];
+
+    // Failing protocols can reference non-failing protocols in the
+    // "extra" subdirectory.
+    if !should_pass {
+        let mut extra_path = path.clone();
+        extra_path.push("extra");
+        include_dirs.push(extra_path);
+    }
 
     let mut disabled_tests = HashSet::new();
     for f in DISABLED_TESTS {
@@ -51,6 +59,11 @@ fn test_files(test_file_path: &str, should_pass: bool) {
     let entries = fs::read_dir(&path).expect("Should have the test file directory");
     for entry in entries {
         if let Ok(entry) = entry {
+            // Ignore subdirectories.
+            if entry.path().is_dir() {
+                continue;
+            }
+
             let mut expected_result = should_pass;
             if !should_pass && disabled_tests.contains(entry.path().file_name().unwrap()) {
                 println!(
