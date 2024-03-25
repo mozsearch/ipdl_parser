@@ -1196,6 +1196,15 @@ fn gather_decls_message(
 
     let mut msg_type = MessageTypeDef::new(&md, &message_name, mtype);
 
+    if DELETE_MESSAGE_NAME == message_name {
+        if !msg_type.is_async() {
+            errors.append_one(&md.name.loc, &format!("destructor must be async"));
+        }
+        if md.out_params.len() > 0 {
+            errors.append_one(&md.name.loc, &format!("destructors cannot return values"));
+        }
+    }
+
     if !msg_type.is_async() && msg_type.lazy_send {
         errors.append_one(
             &md.name.loc,
