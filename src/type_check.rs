@@ -229,9 +229,12 @@ impl IPDLType {
         (errors, itype)
     }
 
-    fn is_refcounted(&self) -> bool {
+    fn is_refcounted(&self, tuts: &Option<HashMap<TUId, TranslationUnitType>>) -> bool {
         match self {
             &IPDLType::ImportedCxxType(_, Lifetime::RefCounted, _, _) => true,
+            &IPDLType::ActorType(ref p) => {
+                get_protocol_type(tuts.as_ref().unwrap(), &p).lifetime == Lifetime::RefCounted
+            }
             _ => false,
         }
     }
@@ -704,7 +707,9 @@ fn declare_cxx_type(
             if let Some(decl) = sym_tab.lookup(&full_name) {
                 if let Some(existing_type) = decl.full_name {
                     if existing_type == full_name {
-                        if (refcounted == Lifetime::RefCounted) != decl.decl_type.is_refcounted() {
+                        if (refcounted == Lifetime::RefCounted)
+                            != decl.decl_type.is_refcounted(&None)
+                        {
                             return Errors::one(&spec.loc(),
                                                &format!("inconsistent refcounted status of type `{}`, first declared at {}",
                                                         full_name, decl.loc));
@@ -1361,6 +1366,22 @@ fn gather_decls_protocol(
             &p.0.name.loc,
             &format!("[NeedsOtherPid] only applies to toplevel protocols"),
         );
+    }
+
+    if p_type.is_top_level() {
+        if p_type.lifetime == Lifetime::ManualDealloc {
+            errors.append_one(
+                &p.0.name.loc,
+                &format!("Toplevel protocols cannot be [ManualDealloc]"),
+            );
+        }
+
+        if p_type.proc_child.is_none() {
+            errors.append_one(
+                &p.0.name.loc,
+                &format!("Toplevel protocols must specify [ChildProc]"),
+            );
+        }
     }
 
     // FIXME/cjones Declare all the little C++ thingies that will
