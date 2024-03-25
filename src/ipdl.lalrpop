@@ -283,6 +283,10 @@ AttributeValue: AttributeValue = {
 //--------------------
 // Minor stuff
 
+// XXX intr has been removed in bug 1729044, but keep it around for now to
+// preserve compatibility on SearchFox with versions of Firefox older than 126.
+// It could probably be treated as any other SendSemantics, and all of the
+// related checking could be removed.
 SendSemantics: SendSemantics = {
     "async" => SendSemantics::Async,
     "sync" => SendSemantics::Sync,

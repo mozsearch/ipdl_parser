@@ -229,9 +229,12 @@ impl IPDLType {
         (errors, itype)
     }
 
-    fn is_refcounted(&self) -> bool {
+    fn is_refcounted(&self, tuts: &Option<HashMap<TUId, TranslationUnitType>>) -> bool {
         match self {
             &IPDLType::ImportedCxxType(_, Lifetime::RefCounted, _, _) => true,
+            &IPDLType::ActorType(ref p) => {
+                get_protocol_type(tuts.as_ref().unwrap(), &p).lifetime == Lifetime::RefCounted
+            }
             _ => false,
         }
     }
@@ -385,7 +388,7 @@ struct MessageTypeDef {
     lazy_send: bool,
     virtual_send: bool,
 }
-// XXX Need to add LegacyIntr, Tainted.
+// XXX Need to add Tainted.
 
 fn has_attribute(attributes: &Attributes, key: &str) -> bool {
     attributes.contains_key(key)
@@ -420,6 +423,25 @@ fn get_nested(attributes: &Attributes, key: &str) -> Nesting {
         |_| Nesting::None,
     )
     .unwrap_or(Nesting::None)
+}
+
+struct HostProcesses {
+    parent: Option<String>,
+    child: Option<String>,
+}
+fn get_processes(attributes: &Attributes) -> HostProcesses {
+    fn get<'a>(attributes: &'a Attributes, key: &str) -> Option<String> {
+        match &attributes.get(key)?.1 {
+            AttributeValue::Identifier(s) => Some(s.id.to_string()),
+            // TODO: either emit an error here, or make this irrepresentable
+            _ => None,
+        }
+    }
+
+    HostProcesses {
+        parent: get(attributes, "ParentProc"),
+        child: get(attributes, "ChildProc"),
+    }
 }
 
 fn get_prio_impl(attributes: &Attributes, key: &str) -> Option<Priority> {
@@ -519,6 +541,8 @@ struct ProtocolTypeDef {
     manages: Vec<TUId>,
     messages: Vec<MessageTypeDef>,
     has_delete: bool,
+    proc_parent: Option<String>,
+    proc_child: Option<String>,
     #[allow(dead_code)]
     lifetime: Lifetime,
     needs_other_pid: bool,
@@ -526,6 +550,7 @@ struct ProtocolTypeDef {
 
 impl ProtocolTypeDef {
     fn new(&(ref ns, ref p): &(Namespace, Protocol)) -> ProtocolTypeDef {
+        let processes = get_processes(&p.attributes);
         ProtocolTypeDef {
             qname: ns.qname(),
             send_semantics: p.send_semantics,
@@ -533,11 +558,13 @@ impl ProtocolTypeDef {
             managers: Vec::new(),
             manages: Vec::new(),
             messages: Vec::new(),
+            proc_parent: processes.parent,
+            proc_child: processes.child,
             has_delete: false,
             lifetime: if p.attributes.contains_key("ManualDealloc") {
-                Lifetime::RefCounted
-            } else {
                 Lifetime::ManualDealloc
+            } else {
+                Lifetime::RefCounted
             },
             needs_other_pid: p.attributes.contains_key("NeedsOtherPid"),
         }
@@ -558,6 +585,16 @@ impl ProtocolTypeDef {
     fn converts_to(&self, other: &ProtocolTypeDef) -> bool {
         self.message_strength()
             .converts_to(&other.message_strength())
+    }
+
+    #[allow(dead_code)]
+    fn process_for(&self, side: ProtocolSide) -> Option<&str> {
+        match side {
+            ProtocolSide::Parent => &self.proc_parent,
+            ProtocolSide::Child => &self.proc_child,
+        }
+        .as_ref()
+        .map(|u| u.as_str())
     }
 }
 
@@ -670,7 +707,9 @@ fn declare_cxx_type(
             if let Some(decl) = sym_tab.lookup(&full_name) {
                 if let Some(existing_type) = decl.full_name {
                     if existing_type == full_name {
-                        if (refcounted == Lifetime::RefCounted) != decl.decl_type.is_refcounted() {
+                        if (refcounted == Lifetime::RefCounted)
+                            != decl.decl_type.is_refcounted(&None)
+                        {
                             return Errors::one(&spec.loc(),
                                                &format!("inconsistent refcounted status of type `{}`, first declared at {}",
                                                         full_name, decl.loc));
@@ -784,32 +823,60 @@ fn declare_protocol(
 ) -> Errors {
     let mut errors = Errors::none();
 
-    let protocol_attributes: AttributeSpec = HashMap::from([
-        ("ManualDealloc", Vec::new()),
-        (
-            "NestedUpTo",
-            Vec::from([
-                AttributeSpecValue::Keyword("not"),
-                AttributeSpecValue::Keyword("inside_sync"),
-                AttributeSpecValue::Keyword("inside_cpow"),
-            ]),
-        ),
-        ("NeedsOtherPid", Vec::new()),
-        (
-            "ChildImpl",
-            Vec::from([
-                AttributeSpecValue::Keyword("virtual"),
-                AttributeSpecValue::StringLiteral,
-            ]),
-        ),
-        (
-            "ParentImpl",
-            Vec::from([
-                AttributeSpecValue::Keyword("virtual"),
-                AttributeSpecValue::StringLiteral,
-            ]),
-        ),
-    ]);
+    let protocol_attributes: AttributeSpec = {
+        let process_keywords = || {
+            [
+                "any",
+                "anychild",
+                "anydom",
+                "compositor",
+                // ---
+                "Parent",
+                "Content",
+                "IPDLUnitTest",
+                "GMPlugin",
+                "GPU",
+                "VR",
+                "RDD",
+                "Socket",
+                "RemoteSandboxBroker",
+                "ForkServer",
+                "Utility",
+            ]
+            .iter()
+            .map(|k| AttributeSpecValue::Keyword(k))
+            .collect::<Vec<_>>()
+        };
+
+        HashMap::from([
+            ("ManualDealloc", Vec::new()),
+            (
+                "NestedUpTo",
+                Vec::from([
+                    AttributeSpecValue::Keyword("not"),
+                    AttributeSpecValue::Keyword("inside_sync"),
+                    AttributeSpecValue::Keyword("inside_cpow"),
+                ]),
+            ),
+            ("NeedsOtherPid", Vec::new()),
+            (
+                "ChildImpl",
+                Vec::from([
+                    AttributeSpecValue::Keyword("virtual"),
+                    AttributeSpecValue::StringLiteral,
+                ]),
+            ),
+            (
+                "ParentImpl",
+                Vec::from([
+                    AttributeSpecValue::Keyword("virtual"),
+                    AttributeSpecValue::StringLiteral,
+                ]),
+            ),
+            ("ChildProc", process_keywords()),
+            ("ParentProc", process_keywords()),
+        ])
+    };
     errors.append(check_attributes(&p.attributes, &protocol_attributes));
 
     let p_type = IPDLType::ProtocolType(tuid.clone());
@@ -1120,7 +1187,7 @@ fn gather_decls_message(
                     AttributeSpecValue::Keyword("inside_cpow"),
                 ]),
             ),
-            ("LegacyIntr", Vec::new()),
+            ("LegacyIntr", Vec::new()), // XXX LegacyIntr has been removed.
             ("LazySend", Vec::new()),
             ("VirtualSendImpl", Vec::new()),
         ])
@@ -1128,6 +1195,15 @@ fn gather_decls_message(
     errors.append(check_attributes(&md.attributes, &message_attributes));
 
     let mut msg_type = MessageTypeDef::new(&md, &message_name, mtype);
+
+    if DELETE_MESSAGE_NAME == message_name {
+        if !msg_type.is_async() {
+            errors.append_one(&md.name.loc, &format!("destructor must be async"));
+        }
+        if md.out_params.len() > 0 {
+            errors.append_one(&md.name.loc, &format!("destructors cannot return values"));
+        }
+    }
 
     if !msg_type.is_async() && msg_type.lazy_send {
         errors.append_one(
@@ -1149,7 +1225,7 @@ fn gather_decls_message(
         );
     }
 
-    if md.out_params.len() > 0 && has_attribute(&md.attributes, "ReplyPriority") {
+    if md.out_params.len() == 0 && has_attribute(&md.attributes, "ReplyPriority") {
         errors.append_one(
             &md.name.loc,
             &format!(
@@ -1298,6 +1374,29 @@ fn gather_decls_protocol(
         errors.append_one(
             &p.0.name.loc,
             &format!("[NeedsOtherPid] only applies to toplevel protocols"),
+        );
+    }
+
+    if p_type.is_top_level() {
+        if p_type.lifetime == Lifetime::ManualDealloc {
+            errors.append_one(
+                &p.0.name.loc,
+                &format!("Toplevel protocols cannot be [ManualDealloc]"),
+            );
+        }
+
+        if p_type.proc_child.is_none() {
+            errors.append_one(
+                &p.0.name.loc,
+                &format!("Toplevel protocols must specify [ChildProc]"),
+            );
+        }
+    }
+
+    if p_type.manages.len() > 0 && p_type.lifetime == Lifetime::ManualDealloc {
+        errors.append_one(
+            &p.0.name.loc,
+            &format!("[ManualDealloc] protocols cannot be managers"),
         );
     }
 

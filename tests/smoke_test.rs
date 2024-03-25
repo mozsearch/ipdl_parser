@@ -12,10 +12,21 @@ const BASE_PATH: [&'static str; 2] = [".", "tests"];
 const OK_PATH: &'static str = "ok";
 const ERROR_PATH: &'static str = "error";
 
-// Tests in error/ are disabled because the given checking is not
-// enabled yet.
+// These tests are in error/ but will pass because the required checking
+// has not yet been implemented.
+const ERROR_PASS_TESTS: &'static [&'static str] = &[
+    // Sync message checking hasn't been implemented.
+    "PasyncMessageListed.ipdl",
+    "unknownSyncMessage.ipdl",
+];
 
-const DISABLED_TESTS: &'static [&'static str] = &[];
+// These tests are in error/ and will fail, but with the wrong error
+// message.
+const WRONG_ERROR_TESTS: &'static [&'static str] = &[
+    // We're missing the multiple declaration check from bug 1657504, but we
+    // still end up failing with weird C++ redeclaration errors.
+    "PDouble.ipdl",
+];
 
 fn file_expected_error(file_name: &PathBuf) -> Vec<String> {
     let mut errors = Vec::new();
@@ -41,18 +52,35 @@ fn test_files(test_file_path: &str, should_pass: bool) {
     let mut path: PathBuf = BASE_PATH.iter().collect();
     path.push(test_file_path);
 
-    let include_dirs = vec![path.clone()];
+    let mut include_dirs = vec![path.clone()];
 
-    let mut disabled_tests = HashSet::new();
-    for f in DISABLED_TESTS {
-        disabled_tests.insert(OsStr::new(f));
+    // Failing protocols can reference non-failing protocols in the
+    // "extra" subdirectory.
+    if !should_pass {
+        let mut extra_path = path.clone();
+        extra_path.push("extra");
+        include_dirs.push(extra_path);
+    }
+
+    let mut error_pass_tests = HashSet::new();
+    for f in ERROR_PASS_TESTS {
+        error_pass_tests.insert(OsStr::new(f));
+    }
+    let mut wrong_error_tests = HashSet::new();
+    for f in WRONG_ERROR_TESTS {
+        wrong_error_tests.insert(OsStr::new(f));
     }
 
     let entries = fs::read_dir(&path).expect("Should have the test file directory");
     for entry in entries {
         if let Ok(entry) = entry {
+            // Ignore subdirectories.
+            if entry.path().is_dir() {
+                continue;
+            }
+
             let mut expected_result = should_pass;
-            if !should_pass && disabled_tests.contains(entry.path().file_name().unwrap()) {
+            if !should_pass && error_pass_tests.contains(entry.path().file_name().unwrap()) {
                 println!(
                     "Expecting test to pass when it should fail {:?}",
                     entry.file_name()
@@ -71,6 +99,13 @@ fn test_files(test_file_path: &str, should_pass: bool) {
                         "Expected test to pass, but it failed with \"{}\"",
                         actual_error
                     );
+                    if wrong_error_tests.contains(entry.path().file_name().unwrap()) {
+                        println!(
+                            "Not checking the correctness of the error message for {:?}",
+                            entry.file_name()
+                        );
+                        continue;
+                    }
                     for expected_error in file_expected_error(&entry.path()) {
                         // Lexer errors are different in lalrpop than in Ply,
                         // so do some translation so that the dtorReserved.ipdl
