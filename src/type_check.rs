@@ -562,9 +562,9 @@ impl ProtocolTypeDef {
             proc_child: processes.child,
             has_delete: false,
             lifetime: if p.attributes.contains_key("ManualDealloc") {
-                Lifetime::RefCounted
-            } else {
                 Lifetime::ManualDealloc
+            } else {
+                Lifetime::RefCounted
             },
             needs_other_pid: p.attributes.contains_key("NeedsOtherPid"),
         }
