@@ -821,6 +821,11 @@ fn declare_protocol(
     let protocol_attributes: AttributeSpec = {
         let process_keywords = || {
             [
+                "any",
+                "anychild",
+                "anydom",
+                "compositor",
+                // ---
                 "Parent",
                 "Content",
                 "IPDLUnitTest",
@@ -832,11 +837,6 @@ fn declare_protocol(
                 "RemoteSandboxBroker",
                 "ForkServer",
                 "Utility",
-                // ---
-                "any",
-                "anychild",
-                "compositor",
-                "anydom",
             ]
             .iter()
             .map(|k| AttributeSpecValue::Keyword(k))
