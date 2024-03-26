@@ -10,15 +10,9 @@ build = "build.rs"
 [dependencies.regex]
 version = "0.2.0"
 
-# Add a dependency on the LALRPOP runtime library:
-[dependencies.lalrpop-util]
-git = "https://github.com/mozsearch/lalrpop"
-branch = "mozsearch-version1"
-
-[build-dependencies.lalrpop]
-git = "https://github.com/mozsearch/lalrpop"
-branch = "mozsearch-version1"
-features = ["lexer"]
+[build-dependencies]
+lalrpop = "0.20.2"
 
 [dependencies]
 getopts = "0.2.14"
+lalrpop-util = "0.20.2"

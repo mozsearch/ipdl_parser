@@ -210,7 +210,7 @@ pub fn parse_file(
                     format!(":{} error: bad syntax near `{}'", loc, t.1)
                     // XXX Can anything useful be reported about |expected|?
                 }
-                ParseError::UnrecognizedEOF {
+                ParseError::UnrecognizedEof {
                     location: _,
                     expected: _,
                 } => {
