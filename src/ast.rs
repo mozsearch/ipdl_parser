@@ -244,6 +244,7 @@ pub enum Priority {
     Vsync,
     Mediumhigh,
     Control,
+    Low,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

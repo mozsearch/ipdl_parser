@@ -455,6 +455,7 @@ fn get_prio_impl(attributes: &Attributes, key: &str) -> Option<Priority> {
             ("vsync", Priority::Vsync),
             ("mediumhigh", Priority::Mediumhigh),
             ("control", Priority::Control),
+            ("low", Priority::Low),
         ]),
         |_| Priority::Normal,
     )
@@ -1165,6 +1166,7 @@ fn gather_decls_message(
                 AttributeSpecValue::Keyword("vsync"),
                 AttributeSpecValue::Keyword("mediumhigh"),
                 AttributeSpecValue::Keyword("control"),
+                AttributeSpecValue::Keyword("low"),
             ])
         };
 
