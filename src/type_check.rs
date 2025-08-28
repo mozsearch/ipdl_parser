@@ -190,10 +190,6 @@ impl IPDLType {
         let mut errors = Errors::none();
         let mut itype = self.clone();
 
-        if type_spec.uniqueptr {
-            itype = IPDLType::UniquePtrType(Box::new(itype))
-        }
-
         if let &IPDLType::ProtocolType(ref p) = self {
             itype = IPDLType::ActorType(p.clone())
         }
@@ -218,12 +214,12 @@ impl IPDLType {
             }
         }
 
-        if type_spec.array {
-            itype = IPDLType::ArrayType(Box::new(itype))
-        }
-
-        if type_spec.maybe {
-            itype = IPDLType::MaybeType(Box::new(itype))
+        for modifier in &type_spec.modifiers {
+            itype = match modifier {
+                &TypeSpecModifier::Array => IPDLType::ArrayType(Box::new(itype)),
+                &TypeSpecModifier::Maybe => IPDLType::MaybeType(Box::new(itype)),
+                &TypeSpecModifier::UniquePtr => IPDLType::UniquePtrType(Box::new(itype)),
+            }
         }
 
         (errors, itype)
