@@ -827,11 +827,13 @@ fn declare_protocol(
     let protocol_attributes: AttributeSpec = {
         let process_keywords = || {
             [
+                // The IPDL process options from proc_options in type.py.
                 "any",
                 "anychild",
                 "anydom",
                 "compositor",
-                // ---
+                // The proc-typename fields from this file:
+                // xpcom/geckoprocesstypes_generator/geckoprocesstypes/__init__.py
                 "Parent",
                 "Content",
                 "IPDLUnitTest",
@@ -840,7 +842,6 @@ fn declare_protocol(
                 "VR",
                 "RDD",
                 "Socket",
-                "RemoteSandboxBroker",
                 "ForkServer",
                 "Utility",
             ]
