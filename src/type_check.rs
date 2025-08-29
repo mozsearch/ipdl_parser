@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use ast::*;
-use errors::Errors;
+use crate::ast::*;
+use crate::errors::Errors;
 use std::collections::{HashMap, HashSet};
 
 // C types

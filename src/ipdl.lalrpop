@@ -2,12 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use ast::{Attributes, AttributeValue, CxxTypeKind, Direction, FileType, Identifier,
+use crate::ast::{Attributes, AttributeValue, CxxTypeKind, Direction, FileType, Identifier,
           Location, MessageDecl, Namespace,
           Param, Protocol, QualifiedId, SendSemantics,
           StructField, TranslationUnit, TypeSpecModifier, TypeSpec, UsingStmt};
 
-use parser::{TopLevelDecl, ParserState, PreambleStmt};
+use crate::parser::{TopLevelDecl, ParserState, PreambleStmt};
 
 grammar<'a>(parser_state: &ParserState<'a>);
 
