@@ -12,14 +12,14 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use ast::{
+use crate::ast::{
     Attributes, Direction, FileType, Location, Protocol, StructField, TUId, TranslationUnit,
     TypeSpec, UsingStmt,
 };
-use errors::Errors;
-use ipdl::TranslationUnitParser;
+use crate::errors::Errors;
+use crate::ipdl::TranslationUnitParser;
 
-use uncommenter::uncomment;
+use crate::uncommenter::uncomment;
 
 pub struct TUIdFileMap {
     next_id: TUId,

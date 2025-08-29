@@ -1,4 +1,4 @@
-use ast::Location;
+use crate::ast::Location;
 
 fn error_msg(loc: &Location, err: &str) -> String {
     format!("{}: error: {}", loc, err)
