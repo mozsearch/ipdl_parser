@@ -5,7 +5,7 @@
 use ast::{Attributes, AttributeValue, CxxTypeKind, Direction, FileType, Identifier,
           Location, MessageDecl, Namespace,
           Param, Protocol, QualifiedId, SendSemantics,
-          StructField, TranslationUnit, TypeSpec, UsingStmt};
+          StructField, TranslationUnit, TypeSpecModifier, TypeSpec, UsingStmt};
 
 use parser::{TopLevelDecl, ParserState, PreambleStmt};
 
@@ -308,24 +308,26 @@ Param: Param = {
 };
 
 Type: TypeSpec = {
-    // only actor types are nullable; we check this in the type checker
-    <is_nullable: "nullable"?> <t:BasicType> => t.set_nullable(is_nullable.is_some())
+    <t:BasicType> => t,
+    <mut t:Type> "?" => {
+        t.add_modifier(TypeSpecModifier::Maybe);
+        t
+    },
+    <mut t:Type> "[" "]" => {
+        t.add_modifier(TypeSpecModifier::Array);
+        t
+    },
+    "UniquePtr" "<" <mut t:Type> ">" => {
+        t.add_modifier(TypeSpecModifier::UniquePtr);
+        t
+    },
 };
 
-// ID == CxxType; we forbid qnames here,
-// in favor of the |using| declaration
 BasicType: TypeSpec = {
-    <id:CxxID> <is_array: ("[" "]")?> => {
-        TypeSpec::new(id).set_array(is_array.is_some())
-    },
-    <id:CxxID> "?" => {
-        TypeSpec::new(id).set_maybe(true)
-    },
-    <uniqueptr: CxxUniquePtrInst> => {
-        TypeSpec::new(uniqueptr).set_uniqueptr(true)
+    <is_nullable: "nullable"?> <id:CxxID> => {
+        TypeSpec::new(id, is_nullable.is_some())
     },
 };
-
 
 //--------------------
 // C++ stuff
@@ -348,12 +350,5 @@ CxxID: Identifier = {
 CxxTemplateInst: Identifier = {
     <t_name:Identifier> "<" <arg:Identifier> ">" => {
         Identifier::new(t_name.id + "<" + &arg.id + ">", t_name.loc)
-    }
-};
-
-CxxUniquePtrInst: Identifier = {
-    <start:@L> "UniquePtr" "<" <arg:Identifier> ">" => {
-        let start_loc = parser_state.resolve_location(start);
-        Identifier::new(arg.id, start_loc)
     }
 };

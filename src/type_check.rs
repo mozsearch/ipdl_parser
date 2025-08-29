@@ -190,10 +190,6 @@ impl IPDLType {
         let mut errors = Errors::none();
         let mut itype = self.clone();
 
-        if type_spec.uniqueptr {
-            itype = IPDLType::UniquePtrType(Box::new(itype))
-        }
-
         if let &IPDLType::ProtocolType(ref p) = self {
             itype = IPDLType::ActorType(p.clone())
         }
@@ -218,12 +214,12 @@ impl IPDLType {
             }
         }
 
-        if type_spec.array {
-            itype = IPDLType::ArrayType(Box::new(itype))
-        }
-
-        if type_spec.maybe {
-            itype = IPDLType::MaybeType(Box::new(itype))
+        for modifier in &type_spec.modifiers {
+            itype = match modifier {
+                &TypeSpecModifier::Array => IPDLType::ArrayType(Box::new(itype)),
+                &TypeSpecModifier::Maybe => IPDLType::MaybeType(Box::new(itype)),
+                &TypeSpecModifier::UniquePtr => IPDLType::UniquePtrType(Box::new(itype)),
+            }
         }
 
         (errors, itype)
@@ -455,6 +451,7 @@ fn get_prio_impl(attributes: &Attributes, key: &str) -> Option<Priority> {
             ("vsync", Priority::Vsync),
             ("mediumhigh", Priority::Mediumhigh),
             ("control", Priority::Control),
+            ("low", Priority::Low),
         ]),
         |_| Priority::Normal,
     )
@@ -826,11 +823,13 @@ fn declare_protocol(
     let protocol_attributes: AttributeSpec = {
         let process_keywords = || {
             [
+                // The IPDL process options from proc_options in type.py.
                 "any",
                 "anychild",
                 "anydom",
                 "compositor",
-                // ---
+                // The proc-typename fields from this file:
+                // xpcom/geckoprocesstypes_generator/geckoprocesstypes/__init__.py
                 "Parent",
                 "Content",
                 "IPDLUnitTest",
@@ -839,7 +838,6 @@ fn declare_protocol(
                 "VR",
                 "RDD",
                 "Socket",
-                "RemoteSandboxBroker",
                 "ForkServer",
                 "Utility",
             ]
@@ -1165,6 +1163,7 @@ fn gather_decls_message(
                 AttributeSpecValue::Keyword("vsync"),
                 AttributeSpecValue::Keyword("mediumhigh"),
                 AttributeSpecValue::Keyword("control"),
+                AttributeSpecValue::Keyword("low"),
             ])
         };
 

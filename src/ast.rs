@@ -76,47 +76,32 @@ pub enum AttributeValue {
 pub type Attributes = HashMap<String, (Location, AttributeValue)>;
 
 #[derive(Debug)]
+pub enum TypeSpecModifier {
+    Maybe,
+    Array,
+    UniquePtr,
+}
+
+#[derive(Debug)]
 pub struct TypeSpec {
     pub loc: Location,
     pub spec: String,
-    pub array: bool,
-    pub maybe: bool,
     pub nullable: bool,
-    pub uniqueptr: bool,
+    pub modifiers: Vec<TypeSpecModifier>,
 }
 
 impl TypeSpec {
-    pub fn new(id: Identifier) -> TypeSpec {
+    pub fn new(id: Identifier, nullable: bool) -> TypeSpec {
         TypeSpec {
             loc: id.loc,
             spec: id.id,
-            array: false,
-            maybe: false,
-            nullable: false,
-            uniqueptr: false,
+            nullable: nullable,
+            modifiers: Vec::new(),
         }
     }
 
-    // XXX Get rid of these setters if the fields are just public anyways?
-
-    pub fn set_array(mut self, is_array: bool) -> TypeSpec {
-        self.array = is_array;
-        self
-    }
-
-    pub fn set_maybe(mut self, is_maybe: bool) -> TypeSpec {
-        self.maybe = is_maybe;
-        self
-    }
-
-    pub fn set_nullable(mut self, is_nullable: bool) -> TypeSpec {
-        self.nullable = is_nullable;
-        self
-    }
-
-    pub fn set_uniqueptr(mut self, is_uniqueptr: bool) -> TypeSpec {
-        self.uniqueptr = is_uniqueptr;
-        self
+    pub fn add_modifier(&mut self, m: TypeSpecModifier) {
+        self.modifiers.push(m);
     }
 
     pub fn loc(&self) -> &Location {
@@ -244,6 +229,7 @@ pub enum Priority {
     Vsync,
     Mediumhigh,
     Control,
+    Low,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
