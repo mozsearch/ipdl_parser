@@ -3,7 +3,7 @@ name = "ipdl_parser"
 version = "0.1.0"
 authors = ["Andrew McCreight <continuation@gmail.com>"]
 build = "build.rs"
-edition = "2018"
+edition = "2024"
 
 # Add a dependency on the regex crate; this is not
 # needed if you are writing your own tokenizer by
@@ -16,4 +16,4 @@ lalrpop = "0.20.2"
 
 [dependencies]
 getopts = "0.2.14"
-lalrpop-util = "0.20.2"
+lalrpop-util = { version = "0.20.2", features = [ "lexer" ] }
